@@ -30,7 +30,7 @@ try:
 except ImportError:
     haveLxml = False
 
-import xsd
+from . import xsd
 
 PY3 = sys.version_info > (3,)
 
