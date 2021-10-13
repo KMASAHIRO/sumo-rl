@@ -191,7 +191,10 @@ class SumoEnvironment(MultiAgentEnv):
             df.to_csv(out_csv_name + '_run{}'.format(run) + '.csv', index=False)
 
     # Below functions are for discrete state space
-
+    
+    def save_state(self, filename):
+        traci.simulation.saveState(filename)
+    
     def encode(self, state, ts_id):
         phase = int(np.where(state[:self.traffic_signals[ts_id].num_green_phases] == 1)[0])
         #elapsed = self._discretize_elapsed_time(state[self.num_green_phases])
