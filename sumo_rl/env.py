@@ -33,8 +33,9 @@ class SumoEnvironment(MultiAgentEnv):
     :single_agent: (bool) If true, it behaves like a regular gym.Env. Else, it behaves like a MultiagentEnv (https://github.com/ray-project/ray/blob/master/python/ray/rllib/env/multi_agent_env.py)
     """
 
-    def __init__(self, net_file, route_file, out_csv_name=None, use_gui=False, num_seconds=20000, max_depart_delay=100000,
-                 time_to_teleport=-1, delta_time=5, yellow_time=2, min_green=5, max_green=50, single_agent=False):
+    def __init__(self, net_file, route_file, save_state_dir=None, out_csv_name=None, use_gui=False, num_seconds=20000,
+            max_depart_delay=100000, time_to_teleport=-1, delta_time=5, yellow_time=2, min_green=5, max_green=50,
+            single_agent=False):
 
         self._net = net_file
         self._route = route_file
@@ -66,6 +67,15 @@ class SumoEnvironment(MultiAgentEnv):
         self.run = 0
         self.metrics = []
         self.out_csv_name = out_csv_name
+        
+        self.step_num = 0
+        if save_state_dir is None:
+            os.mkdir("./sumo_state/")
+            self.save_state_dir = "./sumo_state/")
+        else:
+            if not os.path.exists(save_state_dir):
+                raise FileExistsError("directory does not exist")
+            self.save_state_dir = save_state_dir
 
         traci.close()
         
@@ -91,6 +101,9 @@ class SumoEnvironment(MultiAgentEnv):
         self.traffic_signals = {ts: TrafficSignal(self, ts, self.delta_time, self.yellow_time, self.min_green, self.max_green) for ts in self.ts_ids}
 
         self.vehicles = dict()
+
+        save_path = os.path.join(self.save_state_dir, "step0.xml")
+        self.save_state(save_path)
 
         if self.single_agent:
             return self._compute_observations()[self.ts_ids[0]]
@@ -132,6 +145,11 @@ class SumoEnvironment(MultiAgentEnv):
         rewards = self._compute_rewards()
         done = {'__all__': self.sim_step > self.sim_max_time}
         done.update({ts_id: False for ts_id in self.ts_ids})
+        
+        self.step_num += 1
+        save_file = "step" + str(self.step_num) + ".xml"
+        save_path = os.path.join(self.save_state_dir, save_file)
+        self.save_state(save_path)
 
         if self.single_agent:
             return observations[self.ts_ids[0]], rewards[self.ts_ids[0]], done['__all__'], {}
