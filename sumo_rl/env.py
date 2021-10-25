@@ -71,7 +71,7 @@ class SumoEnvironment(MultiAgentEnv):
         self.step_num = 0
         if save_state_dir is None:
             os.mkdir("./sumo_state/")
-            self.save_state_dir = "./sumo_state/")
+            self.save_state_dir = "./sumo_state/"
         else:
             if not os.path.exists(save_state_dir):
                 raise FileExistsError("directory does not exist")
