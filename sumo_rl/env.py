@@ -120,26 +120,22 @@ class SumoEnvironment(MultiAgentEnv):
     def step(self, action):
         # No action, follow fixed TL defined in self.phases
         if action is None or action == {}:
-            for _ in range(self.delta_time):
-                self._sumo_step()
-                if self.sim_step % 5 == 0:
-                    info = self._compute_step_info()
-                    self.metrics.append(info)
+            self._apply_actions(None)
         else:
             self._apply_actions(action)
 
-            time_to_act = False
-            while not time_to_act:
-                self._sumo_step()
+        time_to_act = False
+        while not time_to_act:
+            self._sumo_step()
 
-                for ts in self.ts_ids:
-                    self.traffic_signals[ts].update()
-                    if self.traffic_signals[ts].time_to_act:
-                        time_to_act = True
+            for ts in self.ts_ids:
+                self.traffic_signals[ts].update()
+                if self.traffic_signals[ts].time_to_act:
+                    time_to_act = True
 
-                if self.sim_step % 5 == 0:
-                    info = self._compute_step_info()
-                    self.metrics.append(info)
+            if self.sim_step % 5 == 0:
+                info = self._compute_step_info()
+                self.metrics.append(info)
 
         observations = self._compute_observations()
         rewards = self._compute_rewards()
