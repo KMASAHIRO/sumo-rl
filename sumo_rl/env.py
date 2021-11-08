@@ -76,7 +76,6 @@ class SumoEnvironment(MultiAgentEnv):
             if not os.path.exists(save_state_dir):
                 raise FileExistsError("directory does not exist")
             self.save_state_dir = save_state_dir
-            os.mkdir(os.path.join(self.save_state_dir, "sumo_state_run"+str(self.run+1)+"/"))
 
         traci.close()
         
@@ -87,7 +86,7 @@ class SumoEnvironment(MultiAgentEnv):
         self.run += 1
         self.metrics = []
         self.step_num = 0
-        os.mkdir(os.path.join(self.save_state_dir, "sumo_state_run"+str(self.run+1)+"/"))
+        os.mkdir(os.path.join(self.save_state_dir, "sumo_state_run"+str(self.run)+"/"))
 
         sumo_cmd = [self._sumo_binary,
                      '-n', self._net,
@@ -215,7 +214,7 @@ class SumoEnvironment(MultiAgentEnv):
     
     def save_state(self, file_name, run):
         if file_name is not None:
-            path = os.path.join(self.save_state_dir, "sumo_state_run"+str(run+1)+"/", file_name)
+            path = os.path.join(self.save_state_dir, "sumo_state_run"+str(run)+"/", file_name)
             traci.simulation.saveState(path)
 
     def encode(self, state, ts_id):
