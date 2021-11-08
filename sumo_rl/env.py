@@ -86,7 +86,8 @@ class SumoEnvironment(MultiAgentEnv):
         self.run += 1
         self.metrics = []
         self.step_num = 0
-        os.mkdir(os.path.join(self.save_state_dir, "sumo_state_run"+str(self.run)+"/"))
+        if self.save_state_dir is not None:
+            os.mkdir(os.path.join(self.save_state_dir, "sumo_state_run"+str(self.run)+"/"))
 
         sumo_cmd = [self._sumo_binary,
                      '-n', self._net,
@@ -213,7 +214,7 @@ class SumoEnvironment(MultiAgentEnv):
     # Below functions are for discrete state space
     
     def save_state(self, file_name, run):
-        if file_name is not None:
+        if self.save_state_dir is not None:
             path = os.path.join(self.save_state_dir, "sumo_state_run"+str(run)+"/", file_name)
             traci.simulation.saveState(path)
 
