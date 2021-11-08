@@ -33,9 +33,9 @@ class SumoEnvironment(MultiAgentEnv):
     :single_agent: (bool) If true, it behaves like a regular gym.Env. Else, it behaves like a MultiagentEnv (https://github.com/ray-project/ray/blob/master/python/ray/rllib/env/multi_agent_env.py)
     """
 
-    def __init__(self, net_file, route_file, save_state_dir=None, out_csv_name=None, use_gui=False, num_seconds=20000,
-            max_depart_delay=100000, time_to_teleport=-1, delta_time=5, yellow_time=2, min_green=5, max_green=50,
-            single_agent=False):
+    def __init__(self, net_file, route_file, save_state_dir=None, out_csv_name=None, test=False, use_gui=False, 
+            num_seconds=20000, max_depart_delay=100000, time_to_teleport=-1, delta_time=5, yellow_time=2, 
+            min_green=5, max_green=50,single_agent=False):
 
         self._net = net_file
         self._route = route_file
@@ -68,14 +68,15 @@ class SumoEnvironment(MultiAgentEnv):
         self.metrics = []
         self.out_csv_name = out_csv_name
         
+        self.smooth_record = test
         self.step_num = 0
         if save_state_dir is None:
-            os.mkdir("./sumo_state/")
-            self.save_state_dir = "./sumo_state/"
+            self.save_state_dir = None
         else:
             if not os.path.exists(save_state_dir):
                 raise FileExistsError("directory does not exist")
             self.save_state_dir = save_state_dir
+            os.mkdir(os.path.join(self.save_state_dir, "sumo_state_run"+str(self.run+1)+"/"))
 
         traci.close()
         
@@ -85,6 +86,8 @@ class SumoEnvironment(MultiAgentEnv):
             self.save_csv(self.out_csv_name, self.run)
         self.run += 1
         self.metrics = []
+        self.step_num = 0
+        os.mkdir(os.path.join(self.save_state_dir, "sumo_state_run"+str(self.run+1)+"/"))
 
         sumo_cmd = [self._sumo_binary,
                      '-n', self._net,
@@ -102,9 +105,8 @@ class SumoEnvironment(MultiAgentEnv):
 
         self.vehicles = dict()
 
-        save_path = os.path.join(self.save_state_dir, "step0.xml")
-        self.save_state(save_path)
-
+        self.save_state("step0.xml", self.run)
+        
         if self.single_agent:
             return self._compute_observations()[self.ts_ids[0]]
         else:
@@ -128,6 +130,11 @@ class SumoEnvironment(MultiAgentEnv):
         while not time_to_act:
             self._sumo_step()
 
+            if self.smooth_record:
+                self.step_num += 1
+                save_file = "step" + str(self.step_num) + ".xml"
+                self.save_state(save_file, self.run)
+
             for ts in self.ts_ids:
                 self.traffic_signals[ts].update()
                 if self.traffic_signals[ts].time_to_act:
@@ -142,10 +149,10 @@ class SumoEnvironment(MultiAgentEnv):
         done = {'__all__': self.sim_step > self.sim_max_time}
         done.update({ts_id: False for ts_id in self.ts_ids})
         
-        self.step_num += 1
-        save_file = "step" + str(self.step_num) + ".xml"
-        save_path = os.path.join(self.save_state_dir, save_file)
-        self.save_state(save_path)
+        if not self.smooth_record:
+            self.step_num += 1
+            save_file = "step" + str(self.step_num) + ".xml"
+            self.save_state(save_file, self.run)
 
         if self.single_agent:
             return observations[self.ts_ids[0]], rewards[self.ts_ids[0]], done['__all__'], {}
@@ -206,9 +213,11 @@ class SumoEnvironment(MultiAgentEnv):
 
     # Below functions are for discrete state space
     
-    def save_state(self, filename):
-        traci.simulation.saveState(filename)
-    
+    def save_state(self, file_name, run):
+        if filename is not None:
+            path = os.path.join(self.save_state_dir, "sumo_state_run"+str(run+1)+"/", file_name)
+            traci.simulation.saveState(path)
+
     def encode(self, state, ts_id):
         phase = int(np.where(state[:self.traffic_signals[ts_id].num_green_phases] == 1)[0])
         #elapsed = self._discretize_elapsed_time(state[self.num_green_phases])
