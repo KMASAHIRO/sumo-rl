@@ -214,7 +214,7 @@ class SumoEnvironment(MultiAgentEnv):
     # Below functions are for discrete state space
     
     def save_state(self, file_name, run):
-        if filename is not None:
+        if file_name is not None:
             path = os.path.join(self.save_state_dir, "sumo_state_run"+str(run+1)+"/", file_name)
             traci.simulation.saveState(path)
 
