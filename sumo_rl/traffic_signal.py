@@ -180,7 +180,7 @@ class TrafficSignal:
     def get_distance_and_speed(self):
         veh_dist_mean = list()
         veh_speed_mean = list()
-        for lane in ts.lanes:
+        for lane in self.lanes:
             veh_dist = list()
             veh_speed = list()
             veh_list = traci.lane.getLastStepVehicleIDs(lane)
