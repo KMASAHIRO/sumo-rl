@@ -96,7 +96,8 @@ class TrafficSignal:
         #elapsed = self.traffic_signals[ts].time_on_phase / self.max_green
         density = self.get_lanes_density()
         queue = self.get_lanes_queue()
-        observation = np.array(phase_id + density + queue)
+        distance, speed = self.get_distance_and_speed()
+        observation = np.array(phase_id + density + queue + distance + speed, dtype=np.float32)
         return observation
             
     def compute_reward(self):
@@ -175,3 +176,38 @@ class TrafficSignal:
         for lane in self.lanes:
             veh_list += traci.lane.getLastStepVehicleIDs(lane)
         return veh_list
+
+    def get_distance_and_speed(self):
+        veh_dist_mean = list()
+        veh_speed_mean = list()
+        for lane in ts.lanes:
+            veh_dist = list()
+            veh_speed = list()
+            veh_list = traci.lane.getLastStepVehicleIDs(lane)
+            for veh in veh_list:
+                speed = traci.vehicle.getSpeed(veh)
+                max_speed = traci.vehicle.getMaxSpeed(veh)
+                speed_norm = speed / max_speed
+                veh_speed.append(speed_norm)
+
+                leader = traci.vehicle.getLeader(veh)
+                if leader is None:
+                    continue
+                else:
+                    standard_len = traci.lane.getLength(lane)
+                    dist_norm = leader[1] / standard_len
+                    if dist_norm > 1.0:
+                        dist_norm = 1.0
+                    veh_dist.append(dist_norm)
+
+            if len(veh_dist) == 0:
+                veh_dist_mean.append(1.0)
+            else:
+                veh_dist_mean.append(np.mean(veh_dist).tolist())
+
+            if len(veh_speed) == 0:
+                veh_speed_mean.append(1.0)
+            else:
+                veh_speed_mean.append(np.mean(veh_speed).tolist())
+
+        return veh_dist_mean, veh_speed_mean
