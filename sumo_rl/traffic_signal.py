@@ -87,17 +87,18 @@ class TrafficSignal:
         else:
             self.green_phase = new_phase
             traci.trafficlight.setPhase(self.id, self.phase + 1)  # turns yellow
-            self.next_action_time = self.env.sim_step + self.delta_time + self.yellow_time
+            self.next_action_time = self.env.sim_step + self.min_green + self.yellow_time
             self.is_yellow = True
             self.time_since_last_phase_change = 0
     
     def compute_observation(self):
+        time_info = self.compute_time_for_observation()
         phase_id = [1 if self.phase//2 == i else 0 for i in range(self.num_green_phases)]  # one-hot encoding
         #elapsed = self.traffic_signals[ts].time_on_phase / self.max_green
         density = self.get_lanes_density()
         queue = self.get_lanes_queue()
         distance, speed = self.get_distance_and_speed()
-        observation = np.array(phase_id + density + queue + distance + speed, dtype=np.float32)
+        observation = np.array(time_info + phase_id + density + queue + distance + speed, dtype=np.float32)
         return observation
             
     def compute_reward(self):
@@ -211,3 +212,9 @@ class TrafficSignal:
                 veh_speed_mean.append(np.mean(veh_speed).tolist())
 
         return veh_dist_mean, veh_speed_mean
+
+    def compute_time_for_observation(self):
+        time_norm = self.time_since_last_phase_change/(self.yellow_time + self.min_green*3)
+        if time_norm>1.0:
+            time_norm = 1.0
+        return [float(self.time_to_act), time_norm]

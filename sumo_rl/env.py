@@ -106,6 +106,8 @@ class SumoEnvironment(MultiAgentEnv):
         self.vehicles = dict()
 
         self.save_state("step0.xml", self.run)
+
+        self.time_to_act = False
         
         if self.single_agent:
             return self._compute_observations()[self.ts_ids[0]]
@@ -119,6 +121,46 @@ class SumoEnvironment(MultiAgentEnv):
         """
         return traci.simulation.getTime()
 
+    def step(self, action):
+        if self.time_to_act:
+            # No action, follow fixed TL defined in self.phases
+            if action is None or action == {}:
+                self._apply_actions(None)
+            else:
+                self._apply_actions(action)
+
+        self._sumo_step()
+
+        if self.smooth_record:
+            self.step_num += 1
+            save_file = "step" + str(self.step_num) + ".xml"
+            self.save_state(save_file, self.run)
+
+        for ts in self.ts_ids:
+            self.traffic_signals[ts].update()
+            if self.traffic_signals[ts].time_to_act:
+                self.time_to_act = True
+
+        if self.sim_step % 5 == 0:
+            info = self._compute_step_info()
+            self.metrics.append(info)
+
+        observations = self._compute_observations()
+        rewards = self._compute_rewards()
+        done = {'__all__': self.sim_step > self.sim_max_time}
+        done.update({ts_id: False for ts_id in self.ts_ids})
+
+        if not self.smooth_record:
+            self.step_num += 1
+            save_file = "step" + str(self.step_num) + ".xml"
+            self.save_state(save_file, self.run)
+
+        if self.single_agent:
+            return observations[self.ts_ids[0]], rewards[self.ts_ids[0]], done['__all__'], self.time_to_act
+        else:
+            return observations, rewards, done, self.time_to_act
+
+    """
     def step(self, action):
         # No action, follow fixed TL defined in self.phases
         if action is None or action == {}:
@@ -158,6 +200,7 @@ class SumoEnvironment(MultiAgentEnv):
             return observations[self.ts_ids[0]], rewards[self.ts_ids[0]], done['__all__'], {}
         else:
             return observations, rewards, done, {}
+    """
 
     def _apply_actions(self, actions):
         """
