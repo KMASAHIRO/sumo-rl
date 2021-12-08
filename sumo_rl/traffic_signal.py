@@ -80,7 +80,8 @@ class TrafficSignal:
         if new_phase is not None:
             new_phase *= 2
         
-        if new_phase is None or self.phase == new_phase or self.time_since_last_phase_change < self.min_green + self.yellow_time:
+        if new_phase is None or self.phase == new_phase or self.time_since_last_phase_change < self.min_green + self.yellow_time\
+                or self.phase%2==1:
             #self.green_phase = self.phase
             #traci.trafficlight.setPhase(self.id, self.green_phase)
             if self.time_since_last_phase_change < self.min_green + self.yellow_time:
@@ -89,7 +90,6 @@ class TrafficSignal:
                 self.next_action_time = self.env.sim_step + self.delta_time
         else:
             self.green_phase = new_phase
-            print(self.phase, self.phase+1)
             traci.trafficlight.setPhase(self.id, self.phase + 1)  # turns yellow
             self.next_action_time = self.env.sim_step + self.min_green + self.yellow_time
             self.is_yellow = True
