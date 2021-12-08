@@ -156,9 +156,9 @@ class SumoEnvironment(MultiAgentEnv):
             self.save_state(save_file, self.run)
 
         if self.single_agent:
-            return observations[self.ts_ids[0]], rewards[self.ts_ids[0]], done['__all__'], self.time_to_act
+            return observations[self.ts_ids[0]], rewards[self.ts_ids[0]], done['__all__'], {}
         else:
-            return observations, rewards, done, self.time_to_act
+            return observations, rewards, done, {}
 
     """
     def step(self, action):
@@ -215,10 +215,12 @@ class SumoEnvironment(MultiAgentEnv):
                 self.traffic_signals[ts].set_next_phase(action)
     
     def _compute_observations(self):
-        return {ts: self.traffic_signals[ts].compute_observation() for ts in self.ts_ids if self.traffic_signals[ts].time_to_act}
+        #return {ts: self.traffic_signals[ts].compute_observation() for ts in self.ts_ids if self.traffic_signals[ts].time_to_act}
+        return {ts: self.traffic_signals[ts].compute_observation() for ts in self.ts_ids}
 
     def _compute_rewards(self):
-        return {ts: self.traffic_signals[ts].compute_reward() for ts in self.ts_ids if self.traffic_signals[ts].time_to_act}
+        #return {ts: self.traffic_signals[ts].compute_reward() for ts in self.ts_ids if self.traffic_signals[ts].time_to_act}
+        return {ts: self.traffic_signals[ts].compute_reward() for ts in self.ts_ids}
 
     @property
     def observation_space(self):
