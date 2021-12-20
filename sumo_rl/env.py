@@ -137,7 +137,7 @@ class SumoEnvironment(MultiAgentEnv):
             for ts in self.ts_ids:
                 self.traffic_signals[ts].update()
 
-            if self.sim_step % 5 == 0:
+            if self.sim_step % self.delta_time == 0:
                 info = self._compute_step_info()
                 self.metrics.append(info)
 
