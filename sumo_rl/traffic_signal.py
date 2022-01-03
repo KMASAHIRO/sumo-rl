@@ -106,7 +106,12 @@ class TrafficSignal:
         return observation
             
     def compute_reward(self):
-        self.last_reward = self._waiting_time_reward()
+        if self.env.reward_type == "waiting_time":
+            self.last_reward = self._waiting_time_reward()
+        elif self.env.reward_type == "vehicle_speed":
+            self.last_reward = self._vehicle_speed_reward()
+        elif self.env.reward_type == "vehicle_distance":
+            self.last_reward = self._vehicle_distance_reward()
         return self.last_reward
     
     def _pressure_reward(self):
@@ -141,6 +146,40 @@ class TrafficSignal:
         reward = -ts_wait
         self.last_measure = ts_wait
         return reward
+
+    def _vehicle_speed_reward(self):
+        veh_speed = list()
+        for lane in self.lanes:
+            veh_list = traci.lane.getLastStepVehicleIDs(lane)
+            for veh in veh_list:
+                speed = traci.vehicle.getSpeed(veh)
+                speed_norm = speed / 10.0
+                veh_speed.append(speed_norm)
+
+        if len(veh_speed) == 0:
+            veh_speed_mean = 0.0
+        else:
+            veh_speed_mean = np.mean(veh_speed).tolist()
+        return veh_speed_mean
+
+    def _vehicle_distance_reward(self):
+        veh_dist = list()
+        for lane in self.lanes:
+            veh_list = traci.lane.getLastStepVehicleIDs(lane)
+            for veh in veh_list:
+                leader = traci.vehicle.getLeader(veh)
+                if leader is None:
+                    continue
+                else:
+                    dist_norm = leader[1] / 10.0
+                    veh_dist.append(dist_norm)
+
+        if len(veh_dist) == 0:
+            veh_dist_mean = 0.0
+        else:
+            veh_dist_mean = np.mean(veh_dist).tolist()
+        return veh_dist_mean
+
 
     def get_waiting_time_per_lane(self):
         wait_time_per_lane = []

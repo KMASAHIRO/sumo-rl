@@ -35,7 +35,7 @@ class SumoEnvironment(MultiAgentEnv):
 
     def __init__(self, net_file, route_file, save_state_dir=None, out_csv_name=None, test=False, use_gui=False, 
             num_seconds=20000, max_depart_delay=100000, time_to_teleport=-1, delta_time=5, yellow_time=2, 
-            min_green=5, max_green=50,single_agent=False):
+            min_green=5, max_green=50, reward_type="waiting_time", single_agent=False):
 
         self._net = net_file
         self._route = route_file
@@ -52,6 +52,7 @@ class SumoEnvironment(MultiAgentEnv):
         self.min_green = min_green
         self.max_green = max_green
         self.yellow_time = yellow_time
+        self.reward_type = reward_type
 
         traci.start([sumolib.checkBinary('sumo'), '-n', self._net])  # start only to retrieve information
 
