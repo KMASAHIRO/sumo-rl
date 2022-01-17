@@ -1,3 +1,4 @@
+from lib2to3.pytree import LeafPattern
 import os
 import sys
 from pathlib import Path
@@ -35,7 +36,7 @@ class SumoEnvironment(MultiAgentEnv):
 
     def __init__(self, net_file, route_file, save_state_dir=None, out_csv_name=None, test=False, use_gui=False, 
             num_seconds=20000, max_depart_delay=100000, time_to_teleport=-1, delta_time=5, yellow_time=2, 
-            min_green=5, max_green=50, reward_type="waiting_time", single_agent=False):
+            min_green=5, max_green=50, reward_type="waiting_time", label="sim1", single_agent=False):
 
         self._net = net_file
         self._route = route_file
@@ -53,8 +54,9 @@ class SumoEnvironment(MultiAgentEnv):
         self.max_green = max_green
         self.yellow_time = yellow_time
         self.reward_type = reward_type
+        self.label = label
 
-        traci.start([sumolib.checkBinary('sumo'), '-n', self._net])  # start only to retrieve information
+        traci.start([sumolib.checkBinary('sumo'), '-n', self._net], label=self.label)  # start only to retrieve information
 
         self.single_agent = single_agent
         self.ts_ids = traci.trafficlight.getIDList()
@@ -100,7 +102,7 @@ class SumoEnvironment(MultiAgentEnv):
         if self.use_gui:
             sumo_cmd.append('--start')
 
-        traci.start(sumo_cmd)
+        traci.start(sumo_cmd, label=self.label)
 
         self.traffic_signals = {ts: TrafficSignal(self, ts, self.delta_time, self.yellow_time, self.min_green, self.max_green) for ts in self.ts_ids}
 
