@@ -75,10 +75,12 @@ class SumoEnvironment(MultiAgentEnv):
         self.step_num = 0
         if save_state_dir is None:
             self.save_state_dir = None
+            self.save_state_flag = False
         else:
             if not os.path.exists(save_state_dir):
                 raise FileExistsError("directory does not exist")
             self.save_state_dir = save_state_dir
+            self.save_state_flag = True
 
         traci.close()
         
@@ -258,7 +260,7 @@ class SumoEnvironment(MultiAgentEnv):
     # Below functions are for discrete state space
     
     def save_state(self, file_name, run):
-        if self.save_state_dir is not None:
+        if self.save_state_dir is not None and self.save_state_flag:
             path = os.path.join(self.save_state_dir, "sumo_state_run"+str(run)+"/", file_name)
             traci.simulation.saveState(path)
 
