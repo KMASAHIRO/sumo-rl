@@ -240,7 +240,7 @@ class TrafficSignal:
                 else:
                     standard_len = traci.lane.getLength(lane)
                     dist_norm = leader[1] / standard_len
-                    if dist_norm > 1.0:
+                    if abs(dist_norm) > 1.0:
                         dist_norm = 1.0
                     veh_dist.append(dist_norm)
 
