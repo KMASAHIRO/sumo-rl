@@ -34,10 +34,10 @@ class SumoEnvironment(MultiAgentEnv):
     :single_agent: (bool) If true, it behaves like a regular gym.Env. Else, it behaves like a MultiagentEnv (https://github.com/ray-project/ray/blob/master/python/ray/rllib/env/multi_agent_env.py)
     """
 
-    def __init__(self, net_file, route_file, save_state_dir=None, out_csv_name=None, test=False, use_gui=False, 
-            num_seconds=20000, max_depart_delay=100000, time_to_teleport=-1, delta_time=5, yellow_time=2, 
-            min_green=5, max_green=50, reward_type="waiting_time", label="sim1", single_agent=False):
-
+    def __init__(
+        self, net_file, route_file, save_state_dir=None, save_state_interval=1, out_csv_name=None, test=False, 
+        use_gui=False, num_seconds=20000, max_depart_delay=100000, time_to_teleport=-1, delta_time=5, yellow_time=2, 
+        min_green=5, max_green=50, reward_type="waiting_time", label="sim1", single_agent=False):
         self._net = net_file
         self._route = route_file
         self.use_gui = use_gui
@@ -73,6 +73,7 @@ class SumoEnvironment(MultiAgentEnv):
         
         self.smooth_record = test
         self.step_num = 0
+        self.save_state_interval = save_state_interval
         if save_state_dir is None:
             self.save_state_dir = None
             self.save_state_flag = False
@@ -83,7 +84,7 @@ class SumoEnvironment(MultiAgentEnv):
             self.save_state_flag = True
 
         traci.close()
-        
+    
     def reset(self):
         if self.run != 0:
             traci.close()
@@ -136,8 +137,9 @@ class SumoEnvironment(MultiAgentEnv):
 
             if self.smooth_record:
                 self.step_num += 1
-                save_file = "step" + str(self.step_num) + ".xml"
-                self.save_state(save_file, self.run)
+                if self.step_num % self.save_state_interval == 0:
+                    save_file = "step" + str(self.step_num) + ".xml"
+                    self.save_state(save_file, self.run)
 
             for ts in self.ts_ids:
                 self.traffic_signals[ts].update()
@@ -153,8 +155,9 @@ class SumoEnvironment(MultiAgentEnv):
 
         if not self.smooth_record:
             self.step_num += 1
-            save_file = "step" + str(self.step_num) + ".xml"
-            self.save_state(save_file, self.run)
+            if self.step_num % self.save_state_interval == 0:
+                save_file = "step" + str(self.step_num) + ".xml"
+                self.save_state(save_file, self.run)
 
         if self.single_agent:
             return observations[self.ts_ids[0]], rewards[self.ts_ids[0]], done['__all__'], {}
