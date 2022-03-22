@@ -238,7 +238,7 @@ class Agent():
 
             n = cluster_size.sum()
             cluster_size_norm = (cluster_size + eps) / (n + embedding_num*eps) * n
-            embedding = embedding_avg / cluster_size_norm.unsqueeze(0)
+            embedding = embedding_avg / cluster_size_norm.unsqueeze(-1)
 
             self.embedding = torch.nn.Parameter(embedding, requires_grad=False)
             self.embedding_avg = torch.nn.Parameter(embedding_avg, requires_grad=False)
