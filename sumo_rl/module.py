@@ -217,30 +217,30 @@ class Agent():
         return chosen_actions
 
     def train(self, return_loss=False):
-        prev_embedding = self.policy_function.embedding.detach()
-        prev_embedding_avg = self.policy_function.embedding_avg.detach()
-        prev_cluster_size = self.policy_function.cluster_size.detach()
-        decay = self.policy_function.embedding_decay
-        embedding_num = self.policy_function.embedding_num
-        eps = self.policy_function.eps
-
-        chosen_num = list()
-        embedding_sum = list()
-        for i in range(len(self.middle_outputs)):
-            chosen_num.append(len(self.middle_outputs[i]))
-            embedding_sum.append(torch.tensor(self.middle_outputs[i]).sum(-1))
-        embedding_avg = decay*prev_embedding_avg + (1-decay)*torch.tensor(embedding_sum)
-        cluster_size = decay*prev_cluster_size + (1-decay)*torch.tensor(chosen_num)
-
-        n = cluster_size.sum()
-        cluster_size_norm = (cluster_size + eps) / (n + embedding_num*eps) * n
-        embedding = embedding_avg / cluster_size_norm.unsqueeze(0)
-
-        self.embedding = torch.nn.Parameter(embedding, requires_grad=False)
-        self.embedding_avg = torch.nn.Parameter(embedding_avg, requires_grad=False)
-        self.cluster_size = torch.nn.Parameter(cluster_size, requires_grad=False)
-        
         if self.encoder_type == "vq":
+            prev_embedding = self.policy_function.embedding.detach()
+            prev_embedding_avg = self.policy_function.embedding_avg.detach()
+            prev_cluster_size = self.policy_function.cluster_size.detach()
+            decay = self.policy_function.embedding_decay
+            embedding_num = self.policy_function.embedding_num
+            eps = self.policy_function.eps
+
+            chosen_num = list()
+            embedding_sum = list()
+            for i in range(len(self.middle_outputs)):
+                chosen_num.append(len(self.middle_outputs[i]))
+                embedding_sum.append(torch.stack(self.middle_outputs[i],dim=0).sum(-1))
+            embedding_avg = decay*prev_embedding_avg + (1-decay)*torch.stack(embedding_sum, dim=0)
+            cluster_size = decay*prev_cluster_size + (1-decay)*torch.tensor(chosen_num)
+
+            n = cluster_size.sum()
+            cluster_size_norm = (cluster_size + eps) / (n + embedding_num*eps) * n
+            embedding = embedding_avg / cluster_size_norm.unsqueeze(0)
+
+            self.embedding = torch.nn.Parameter(embedding, requires_grad=False)
+            self.embedding_avg = torch.nn.Parameter(embedding_avg, requires_grad=False)
+            self.cluster_size = torch.nn.Parameter(cluster_size, requires_grad=False)
+        
             loss = self.loss_f(self.actions_prob_history, self.rewards_history, self.beta, self.beta_loss_history)
         else:
             loss = self.loss_f(self.actions_prob_history, self.rewards_history)
