@@ -1,11 +1,10 @@
 import os
-import sumo_rl
-from sumo_rl.env import SumoEnvironment
 import torch
 import numpy as np
 import pandas as pd
 import traci
 
+from .env import SumoEnvironment
 from .module import Agent
 
 # 学習させる関数
@@ -15,13 +14,15 @@ def test_agent(
     route_file='/home/kato/traffic_light_control/sumo-rl/nets/2x2grid/2x2.rou.xml',
     model_load_path=None, num_traffic_lights=4, obs_dim=78, num_actions=4, max_steps=300, 
     episodes=10000, delta_time=1, yellow_time=2, min_green=5, reward_type="waiting_time", 
-    num_layers=1, num_hidden_units=128, encoder_type="fc", lstm_len=5, 
+    num_layers=1, num_hidden_units=512, encoder_type="fc", lstm_len=5, embedding_num=5, 
     reward_csv=None, use_gpu=False, use_gui=False, seed=0):
     os.environ['SUMO_HOME'] = sumo_home
     agent = Agent(
-        num_states=obs_dim*num_traffic_lights, num_traffic_lights=num_traffic_lights, num_actions=num_actions, 
-        num_layers=num_layers, num_hidden_units=num_hidden_units, temperature=1.0, encoder_type=encoder_type, 
-        is_train=False, use_gpu=use_gpu, model_path=model_load_path)
+        num_states=obs_dim*num_traffic_lights, num_traffic_lights=num_traffic_lights, 
+        num_actions=num_actions, num_layers=num_layers, num_hidden_units=num_hidden_units, 
+        temperature=1.0, noise=0.0, encoder_type=encoder_type, lr=3e-5, decay_rate=0.01, 
+        embedding_num=embedding_num, embedding_decay=0.99, eps=1e-5, beta=0.25, is_train=False, 
+        use_gpu=use_gpu, model_path=model_load_path)
     
     if reward_csv is not None:
         csv_dir = "./" + reward_csv.replace(".csv","") + "/outputs"
@@ -225,7 +226,7 @@ def test_agent_sumorl(
 
         for j in range(max_steps):
             for k in range(parallel):
-                if end_ list[k]:
+                if end_list[k]:
                     continue
                 traci.switch(conn_label[k])
 

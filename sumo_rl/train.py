@@ -1,11 +1,10 @@
 import os
-import sumo_rl
-from sumo_rl.env import SumoEnvironment
 import torch
 import numpy as np
 import pandas as pd
 import traci
 
+from .env import SumoEnvironment
 from .module import Agent
 
 # 学習させる関数
@@ -15,13 +14,15 @@ def train_agent(
     route_file='/home/kato/traffic_light_control/sumo-rl/nets/2x2grid/2x2.rou.xml',
     model_save_path=None, num_traffic_lights=4, obs_dim=78, num_actions=4, episode_per_learn=20, 
     max_steps=300, episodes=10000, delta_time=1, yellow_time=2, min_green=5, reward_type="waiting_time", 
-    num_layers=1, num_hidden_units=128, lr=3e-5, decay_rate=0.01, temperature=1.0, noise=0.0, encoder_type="fc", 
-    lstm_len=5, reward_csv=None, loss_csv=None, use_gpu=False):
+    num_layers=1, num_hidden_units=512, lr=3e-5, decay_rate=0.01, temperature=1.0, noise=0.0, encoder_type="fc", 
+    lstm_len=5, embedding_num=5, embedding_decay=0.99, eps=1e-5, beta=0.25, reward_csv=None, loss_csv=None, 
+    use_gpu=False):
     os.environ['SUMO_HOME'] = sumo_home
     agent = Agent(
         num_states=obs_dim*num_traffic_lights, num_traffic_lights=num_traffic_lights, num_actions=num_actions, 
         num_layers=num_layers, num_hidden_units=num_hidden_units, temperature=temperature, noise=noise, 
-        encoder_type=encoder_type, is_train=True, lr=lr, decay_rate=decay_rate, use_gpu=use_gpu)
+        encoder_type=encoder_type, lr=lr, decay_rate=decay_rate, embedding_num=embedding_num, 
+        embedding_decay=embedding_decay, eps=eps, beta=beta, is_train=True, use_gpu=use_gpu)
     
     steps = 0
     steps_per_learn = max_steps*episode_per_learn
@@ -250,7 +251,7 @@ def train_agent_sumorl(
 
         for j in range(max_steps):
             for k in range(parallel):
-                if end_ list[k]:
+                if end_list[k]:
                     continue
                 traci.switch(conn_label[k])
 
