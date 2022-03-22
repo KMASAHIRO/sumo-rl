@@ -9,7 +9,6 @@ from .module import Agent
 
 # 学習させる関数
 def train_agent(
-    sumo_home='/home/kato/traffic_light_control/traffic_light_control/lib/python3.6/site-packages/sumo', 
     net_file='/home/kato/traffic_light_control/sumo-rl/nets/2x2grid/2x2.net.xml',
     route_file='/home/kato/traffic_light_control/sumo-rl/nets/2x2grid/2x2.rou.xml',
     model_save_path=None, num_traffic_lights=4, obs_dim=78, num_actions=4, episode_per_learn=20, 
@@ -17,7 +16,6 @@ def train_agent(
     num_layers=1, num_hidden_units=512, lr=3e-5, decay_rate=0.01, temperature=1.0, noise=0.0, encoder_type="fc", 
     lstm_len=5, embedding_num=5, embedding_decay=0.99, eps=1e-5, beta=0.25, reward_csv=None, loss_csv=None, 
     use_gpu=False):
-    os.environ['SUMO_HOME'] = sumo_home
     agent = Agent(
         num_states=obs_dim*num_traffic_lights, num_traffic_lights=num_traffic_lights, num_actions=num_actions, 
         num_layers=num_layers, num_hidden_units=num_hidden_units, temperature=temperature, noise=noise, 
@@ -168,7 +166,6 @@ def train_agent(
 
 # 学習させる関数(sumo_rlの実験と同じ設定)
 def train_agent_sumorl(
-    sumo_home='/home/kato/traffic_light_control/traffic_light_control/lib/python3.6/site-packages/sumo', 
     net_file='/home/kato/traffic_light_control/sumo-rl/nets/2x2grid/2x2.net.xml',
     route_file='/home/kato/traffic_light_control/sumo-rl/nets/2x2grid/2x2.rou.xml',
     model_save_path=None, num_traffic_lights=4, obs_dim=78, num_actions=4, steps_per_learn=100, 
@@ -176,7 +173,6 @@ def train_agent_sumorl(
     num_layers=1, num_hidden_units=128, lr=3e-5, decay_rate=0.01, temperature=1.0, noise=0.0, encoder_type="fc", 
     lstm_len=5, parallel=1, reward_csv=None, loss_csv=None, save_state_dir=None, save_state_interval=50, 
     use_gpu=False):
-    os.environ['SUMO_HOME'] = sumo_home
     agent = Agent(
         num_states=obs_dim*num_traffic_lights, num_traffic_lights=num_traffic_lights, 
         num_actions=num_actions, num_layers=num_layers, num_hidden_units=num_hidden_units,
