@@ -158,17 +158,20 @@ class Agent():
         self.encoder_type = encoder_type
         self.beta = beta
         self.is_train = is_train
-        self.use_gpu = use_gpu
 
+        if use_gpu:
+            self.device = torch.device("cuda")
+        else:
+            self.device = torch.device("cpu")
+        
         self.policy_function = PolicyFunction(
             self.num_states, self.num_traffic_lights, self.num_actions, num_layers, 
             num_hidden_units, temperature, noise, encoder_type, embedding_num, 
             embedding_decay, eps, use_gpu)
+        self.policy_function.to(self.device)
+
         if model_path:
             self.policy_function.load_state_dict(torch.load(model_path))
-        if self.use_gpu:
-            device = torch.device("cuda")
-            self.policy_function.to(device)
 
         if self.is_train:
             self.actions_prob_history = list()
@@ -192,10 +195,7 @@ class Agent():
             self.policy_function.eval()
 
     def act(self, obs):
-        obs = torch.tensor(obs, dtype=torch.float32)
-        if self.use_gpu:
-            device = torch.device("cuda")
-            obs = obs.to(device)
+        obs = torch.tensor(obs, dtype=torch.float32).to(self.device)
 
         if self.is_train:
             if self.encoder_type == "vq":
@@ -237,8 +237,8 @@ class Agent():
                     embedding_sum.append(torch.zeros(len(prev_embedding_avg[i])))
                 else:
                     embedding_sum.append(torch.stack(self.middle_outputs[i],dim=0).sum(0))
-            embedding_avg = decay*prev_embedding_avg + (1-decay)*torch.stack(embedding_sum, dim=0)
-            cluster_size = decay*prev_cluster_size + (1-decay)*torch.tensor(chosen_num)
+            embedding_avg = decay*prev_embedding_avg + (1-decay)*torch.stack(embedding_sum, dim=0).to(self.device)
+            cluster_size = decay*prev_cluster_size + (1-decay)*torch.tensor(chosen_num).to(self.device)
 
             n = cluster_size.sum()
             cluster_size_norm = (cluster_size + eps) / (n + embedding_num*eps) * n
@@ -273,7 +273,5 @@ class Agent():
     def save_model(self, path):
         self.policy_function.to("cpu")
         torch.save(self.policy_function.state_dict(), path)
-
-        if self.use_gpu:
-            device = torch.device("cuda")
-            self.policy_function.to(device)
+        
+        self.policy_function.to(self.device)
