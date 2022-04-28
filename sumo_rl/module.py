@@ -207,12 +207,13 @@ class Agent():
         
         chosen_actions = list()
         for i in range(self.num_traffic_lights):
+            prob_numpy = actions_prob[i].to("cpu").detach().numpy()
             chosen_actions.append(
                 np.random.choice(
-                    a=np.arange(4), 
+                    a=np.arange(len(prob_numpy)), 
                     size=1, 
                     replace=True, 
-                    p=actions_prob[i].to("cpu").detach().numpy()
+                    p=prob_numpy
                     )[0]
                 )
 
