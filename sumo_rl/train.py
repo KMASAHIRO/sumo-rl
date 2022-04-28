@@ -11,19 +11,11 @@ from .module import Agent
 def train_agent(
     net_file='/home/kato/traffic_light_control/sumo-rl/nets/2x2grid/2x2.net.xml',
     route_file='/home/kato/traffic_light_control/sumo-rl/nets/2x2grid/2x2.rou.xml',
-    model_save_path=None, num_traffic_lights=4, obs_dim=78, num_actions=4, episode_per_learn=20, 
-    max_steps=300, episodes=10000, delta_time=1, yellow_time=2, min_green=5, reward_type="waiting_time", 
-    num_layers=1, num_hidden_units=512, lr=3e-5, decay_rate=0.01, temperature=1.0, noise=0.0, encoder_type="fc", 
-    lstm_len=5, embedding_num=5, embedding_decay=0.99, eps=1e-5, beta=0.25, reward_csv=None, loss_csv=None, 
-    use_gpu=False):
-    agent = Agent(
-        num_states=obs_dim*num_traffic_lights, num_traffic_lights=num_traffic_lights, num_actions=num_actions, 
-        num_layers=num_layers, num_hidden_units=num_hidden_units, temperature=temperature, noise=noise, 
-        encoder_type=encoder_type, lr=lr, decay_rate=decay_rate, embedding_num=embedding_num, 
-        embedding_decay=embedding_decay, eps=eps, beta=beta, is_train=True, use_gpu=use_gpu)
-    
-    steps = 0
-    steps_per_learn = max_steps*episode_per_learn
+    model_save_path=None, episode_per_learn=20, max_steps=300, episodes=10000, begin_seconds=0.0, 
+    delta_time=1, yellow_time=2, min_green=5, reward_type="waiting_time", num_layers=1, 
+    num_hidden_units=512, lr=3e-5, decay_rate=0.01, temperature=1.0, noise=0.0, encoder_type="fc", 
+    lstm_len=5, embedding_num=5, embedding_decay=0.99, eps=1e-5, beta=0.25, reward_csv=None, 
+    loss_csv=None, use_gpu=False):
     
     if reward_csv is not None:
         csv_dir = "./" + reward_csv.replace(".csv","") + "/outputs"
@@ -32,19 +24,38 @@ def train_agent(
     env = SumoEnvironment(net_file=net_file,
                           route_file=route_file,
                           save_state_dir=None,
-                          out_csv_name=csv_dir, test=False, use_gui=False,
-                          delta_time=delta_time, yellow_time=yellow_time, 
-                          min_green=min_green, reward_type=reward_type, 
-                          single_agent=False)
+                          out_csv_name=csv_dir, test=False, use_gui=False, 
+                          begin_seconds=begin_seconds, delta_time=delta_time, 
+                          yellow_time=yellow_time, min_green=min_green, 
+                          reward_type=reward_type, single_agent=False)
+    traffic_light_ids = env.ts_ids
+
+    reset_obs = env.reset()
+    num_states = 0
+    for obs_t in reset_obs.values():
+        num_states += (len(obs_t)+1) * 2
+    num_actions = list()
+    for id in traffic_light_ids:
+        num_actions.append(env.traffic_signals[id].num_green_phases)
     
+    agent = Agent(
+        num_states=num_states, num_traffic_lights=len(traffic_light_ids), num_actions=num_actions, 
+        num_layers=num_layers, num_hidden_units=num_hidden_units, temperature=temperature, noise=noise, 
+        encoder_type=encoder_type, lr=lr, decay_rate=decay_rate, embedding_num=embedding_num, 
+        embedding_decay=embedding_decay, eps=eps, beta=beta, is_train=True, use_gpu=use_gpu)
+    
+    steps = 0
+    steps_per_learn = max_steps*episode_per_learn
+
     loss_list = list()
     best_reward_mean = float("-inf")
     current_reward_sum = 0
     for i in range(episodes):
         if encoder_type == "lstm":
             obs_seq = list()
-        reset_obs = env.reset()
-        traffic_light_ids = tuple(reset_obs.keys())
+        if i!= 0:
+            _ = env.reset()
+        
         action = dict()
         for j in range(len(traffic_light_ids)):
             action[traffic_light_ids[j]] = None

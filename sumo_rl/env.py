@@ -36,7 +36,7 @@ class SumoEnvironment(MultiAgentEnv):
 
     def __init__(
         self, net_file, route_file, save_state_dir=None, save_state_interval=1, out_csv_name=None, test=False, 
-        use_gui=False, num_seconds=20000, max_depart_delay=100000, time_to_teleport=-1, delta_time=5, yellow_time=2, 
+        use_gui=False, begin_seconds=0.0, num_seconds=20000.0, max_depart_delay=100000, time_to_teleport=-1, delta_time=5, yellow_time=2, 
         min_green=5, max_green=50, reward_type="waiting_time", label="sim1", single_agent=False):
         self._net = net_file
         self._route = route_file
@@ -46,7 +46,8 @@ class SumoEnvironment(MultiAgentEnv):
         else:
             self._sumo_binary = sumolib.checkBinary('sumo')
 
-        self.sim_max_time = num_seconds
+        self.begin_seconds = begin_seconds
+        self.sim_max_time = begin_seconds + num_seconds
         self.delta_time = delta_time  # seconds on sumo at each step
         self.max_depart_delay = max_depart_delay  # Max wait time to insert a vehicle
         self.time_to_teleport = time_to_teleport
@@ -110,6 +111,8 @@ class SumoEnvironment(MultiAgentEnv):
         self.traffic_signals = {ts: TrafficSignal(self, ts, self.delta_time, self.yellow_time, self.min_green, self.max_green) for ts in self.ts_ids}
 
         self.vehicles = dict()
+
+        traci.simulationStep(self.begin_seconds)
 
         self.save_state("step0.xml", self.run)
         

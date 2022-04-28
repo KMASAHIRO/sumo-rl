@@ -41,7 +41,7 @@ class PolicyFunction(torch.nn.Module):
         
         fc_last_layers = list()
         for i in range(num_traffic_lights):
-            fc_last_layers.append(torch.nn.Linear(num_hidden_units, self.num_actions))
+            fc_last_layers.append(torch.nn.Linear(num_hidden_units, self.num_actions[i]))
         self.fc_last_layers = torch.nn.ModuleList(fc_last_layers)
 
         fc_layers = list()
@@ -108,14 +108,13 @@ class PolicyFunction(torch.nn.Module):
         last_outputs = list()
         for i in range(self.num_traffic_lights):
             last_x = self.fc_last_layers[i](x)
-            last_x = self.softmax(last_x/self.temperature).unsqueeze(0)
+            last_x = self.softmax(last_x/self.temperature)
             last_outputs.append(last_x)
-        outputs = torch.cat(last_outputs, dim=0)
         
         if self.encoder_type == "vq" and self.training:
-            return outputs, beta_loss, vector, embedding_idx
+            return last_outputs, beta_loss, vector, embedding_idx
         else:
-            return outputs
+            return last_outputs
 
 # 損失関数(期待収益のマイナス符号)
 class PolicyGradientLossWithREINFORCE(torch.nn.Module):
@@ -206,14 +205,20 @@ class Agent():
             with torch.no_grad():
                 actions_prob = self.policy_function(obs)
         
-        actions_prob_numpy = actions_prob.to("cpu").detach().numpy()
         chosen_actions = list()
         for i in range(self.num_traffic_lights):
-            chosen_actions.append(np.random.choice(a=np.arange(4), size=1, replace=True, p=actions_prob_numpy[i])[0])
+            chosen_actions.append(
+                np.random.choice(
+                    a=np.arange(4), 
+                    size=1, 
+                    replace=True, 
+                    p=actions_prob[i].to("cpu").detach().numpy()
+                    )[0]
+                )
 
         if self.is_train:
             for i in range(self.num_traffic_lights):
-                self.actions_prob_history.append(actions_prob[i, chosen_actions[i]])
+                self.actions_prob_history.append(actions_prob[i][chosen_actions[i]])
             if self.encoder_type == "vq":
                 self.middle_outputs[embedding_idx].append(vector)
                 self.beta_loss_history.append(beta_loss)
