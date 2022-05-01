@@ -48,7 +48,7 @@ class TrafficSignal:
     def build_phases(self):
         phases = traci.trafficlight.getAllProgramLogics(self.id)[0].phases
 
-        self.green_phase = list()
+        self.green_phases = list()
         self.yellow_dict = dict()
         for phase in phases:
             state = phase.state
