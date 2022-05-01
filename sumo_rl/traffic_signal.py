@@ -16,49 +16,66 @@ class TrafficSignal:
     It is responsible for retrieving information and changing the traffic phase using Traci API
     """
 
-    def __init__(self, env, ts_id, delta_time, yellow_time, min_green, max_green):
+    def __init__(self, env, ts_id, delta_time, yellow_time, min_green):
         self.id = ts_id
         self.env = env
         self.delta_time = delta_time
         self.yellow_time = yellow_time
         self.min_green = min_green
-        self.max_green = max_green
         self.green_phase = 0
         self.is_yellow = False
         self.time_since_last_phase_change = 0
         self.next_action_time = 0
         self.last_measure = 0.0
         self.last_reward = None
-        self.phases = traci.trafficlight.getCompleteRedYellowGreenDefinition(self.id)[0].phases
-        self.num_green_phases = len(self.phases) // 2  # Number of green phases == number of phases (green+yellow) divided by 2
+
+        self.build_phases()
+
         self.lanes = list(dict.fromkeys(traci.trafficlight.getControlledLanes(self.id)))  # Remove duplicates and keep order
         self.out_lanes = [link[0][1] for link in traci.trafficlight.getControlledLinks(self.id) if link]
         self.out_lanes = list(set(self.out_lanes))
+        self.lanes_length = {lane: traci.lane.getLength(lane) for lane in self.lanes}
 
-        """
-        Default observation space is a vector R^(#greenPhases + 2 * #lanes)
-        s = [current phase one-hot encoded, density for each lane, queue for each lane]
-        You can change this by modifing self.observation_space and the method _compute_observations()
-
-        Action space is which green phase is going to be open for the next delta_time seconds
-        """
-        self.observation_space = spaces.Box(low=np.zeros(self.num_green_phases + 2*len(self.lanes)), high=np.ones(self.num_green_phases + 2*len(self.lanes)))
+        self.observation_space = spaces.Box(low=np.zeros(self.num_green_phases+1+2*len(self.lanes), dtype=np.float32), high=np.ones(self.num_green_phases+1+2*len(self.lanes), dtype=np.float32))
         self.discrete_observation_space = spaces.Tuple((
             spaces.Discrete(self.num_green_phases),                       # Green Phase
-            #spaces.Discrete(self.max_green//self.delta_time),            # Elapsed time of phase
+            spaces.Discrete(2),                                           # Binary variable active if min_green seconds already elapsed
             *(spaces.Discrete(10) for _ in range(2*len(self.lanes)))      # Density and stopped-density for each lane
         ))
         self.action_space = spaces.Discrete(self.num_green_phases)
 
+
+    def build_phases(self):
+        phases = traci.trafficlight.getAllProgramLogics(self.id)[0].phases
+
+        self.green_phase = list()
+        self.yellow_dict = dict()
+        for phase in phases:
+            state = phase.state
+            if 'y' not in state and (state.count('r') + state.count('s') != len(state)):
+                self.green_phases.append(traci.trafficlight.Phase(60, state))
+        self.num_green_phases = len(self.green_phases)
+        self.all_phases = self.green_phases.copy()
+
+        for i, p1 in enumerate(self.green_phases):
+            for j, p2 in enumerate(self.green_phases):
+                if i == j:
+                    continue
+                yellow_state = ''
+                for s in range(len(p1.state)):
+                    if (p1.state[s] == 'G' or p1.state[s] == 'g') and (p2.state[s] == 'r' or p2.state[s] == 's'):
+                        yellow_state += 'y'
+                    else:
+                        yellow_state += p1.state[s]
+                self.yellow_dict[(i,j)] = len(self.all_phases)
+                self.all_phases.append(traci.trafficlight.Phase(self.yellow_time, yellow_state))
+
         programs = traci.trafficlight.getAllProgramLogics(self.id)
         logic = programs[0]
         logic.type = 0
-        logic.phases = self.phases
+        logic.phases = self.all_phases
         traci.trafficlight.setProgramLogic(self.id, logic)
-
-    @property
-    def phase(self):
-        return traci.trafficlight.getPhase(self.id)
+        traci.trafficlight.setRedYellowGreenState(self.id, self.all_phases[0].state)
 
     @property
     def time_to_act(self):
@@ -67,38 +84,39 @@ class TrafficSignal:
     def update(self):
         self.time_since_last_phase_change += 1
         if self.is_yellow and self.time_since_last_phase_change == self.yellow_time:
-            traci.trafficlight.setPhase(self.id, int(self.green_phase))
+            #traci.trafficlight.setPhase(self.id, self.green_phase)
+            traci.trafficlight.setRedYellowGreenState(self.id, self.all_phases[self.green_phase].state)
             self.is_yellow = False
 
     def set_next_phase(self, new_phase):
         """
         Sets what will be the next green phase and sets yellow phase if the next phase is different than the current
-
         :param new_phase: (int) Number between [0..num_green_phases] 
         """
-
         if new_phase is not None:
-            new_phase *= 2
+            new_phase = int(new_phase)
         
-        if new_phase is None or self.phase == new_phase or self.time_since_last_phase_change < self.min_green + self.yellow_time\
-                or self.phase%2==1:
-            #self.green_phase = self.phase
+        if new_phase is None or self.green_phase == new_phase or self.time_since_last_phase_change < self.yellow_time + self.min_green:
             #traci.trafficlight.setPhase(self.id, self.green_phase)
-            if self.time_since_last_phase_change < self.min_green + self.yellow_time:
-                self.next_action_time = self.env.sim_step + self.min_green + self.yellow_time - self.time_since_last_phase_change
+            traci.trafficlight.setRedYellowGreenState(self.id, self.all_phases[self.green_phase].state)
+            if self.time_since_last_phase_change < self.yellow_time + self.min_green:
+                self.next_action_time = max(
+                    [self.env.sim_step + self.min_green + self.yellow_time - self.time_since_last_phase_change, 
+                    self.env.sim_step + self.delta_time]
+                    )
             else:
                 self.next_action_time = self.env.sim_step + self.delta_time
         else:
+            #traci.trafficlight.setPhase(self.id, self.yellow_dict[(self.green_phase, new_phase)])  # turns yellow
+            traci.trafficlight.setRedYellowGreenState(self.id, self.all_phases[self.yellow_dict[(self.green_phase, new_phase)]].state)
             self.green_phase = new_phase
-            traci.trafficlight.setPhase(self.id, self.phase + 1)  # turns yellow
-            self.next_action_time = self.env.sim_step + self.min_green + self.yellow_time
+            self.next_action_time = self.env.sim_step + self.delta_time
             self.is_yellow = True
             self.time_since_last_phase_change = 0
     
     def compute_observation(self):
         time_info = self.compute_time_for_observation()
         phase_id = [1 if self.phase//2 == i else 0 for i in range(self.num_green_phases)]  # one-hot encoding
-        #elapsed = self.traffic_signals[ts].time_on_phase / self.max_green
         density = self.get_lanes_density()
         queue = self.get_lanes_queue()
         distance, speed = self.get_distance_and_speed()

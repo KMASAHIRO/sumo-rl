@@ -9,7 +9,7 @@ else:
     sys.exit("Please declare the environment variable 'SUMO_HOME'")
 import traci
 import sumolib
-from ray.rllib.env.multi_agent_env import MultiAgentEnv
+import gym
 from gym.envs.registration import EnvSpec
 import numpy as np
 import pandas as pd
@@ -17,7 +17,7 @@ import pandas as pd
 from .traffic_signal import TrafficSignal
 
 
-class SumoEnvironment(MultiAgentEnv):
+class SumoEnvironment(gym.Env):
     """
     SUMO Environment for Traffic Signal Control
 
@@ -30,14 +30,13 @@ class SumoEnvironment(MultiAgentEnv):
     :param max_depart_delay: (int) Vehicles are discarded if they could not be inserted after max_depart_delay seconds
     :param delta_time: (int) Simulation seconds between actions
     :param min_green: (int) Minimum green time in a phase
-    :param max_green: (int) Max green time in a phase
     :single_agent: (bool) If true, it behaves like a regular gym.Env. Else, it behaves like a MultiagentEnv (https://github.com/ray-project/ray/blob/master/python/ray/rllib/env/multi_agent_env.py)
     """
 
     def __init__(
         self, net_file, route_file, save_state_dir=None, save_state_interval=1, out_csv_name=None, test=False, 
         use_gui=False, begin_seconds=0.0, num_seconds=20000.0, max_depart_delay=100000, time_to_teleport=-1, delta_time=5, yellow_time=2, 
-        min_green=5, max_green=50, reward_type="waiting_time", label="sim1", single_agent=False):
+        min_green=5, reward_type="waiting_time", label="sim1", single_agent=False):
         self._net = net_file
         self._route = route_file
         self.use_gui = use_gui
@@ -52,7 +51,6 @@ class SumoEnvironment(MultiAgentEnv):
         self.max_depart_delay = max_depart_delay  # Max wait time to insert a vehicle
         self.time_to_teleport = time_to_teleport
         self.min_green = min_green
-        self.max_green = max_green
         self.yellow_time = yellow_time
         self.reward_type = reward_type
         self.label = label
@@ -60,8 +58,8 @@ class SumoEnvironment(MultiAgentEnv):
         traci.start([sumolib.checkBinary('sumo'), '-n', self._net], label=self.label)  # start only to retrieve information
 
         self.single_agent = single_agent
-        self.ts_ids = traci.trafficlight.getIDList()
-        self.traffic_signals = {ts: TrafficSignal(self, ts, self.delta_time, self.yellow_time, self.min_green, self.max_green) for ts in self.ts_ids}
+        self.ts_ids = list(traci.trafficlight.getIDList())
+        self.traffic_signals = {ts: TrafficSignal(self, ts, self.delta_time, self.yellow_time, self.min_green) for ts in self.ts_ids}
         self.vehicles = dict()
 
         self.reward_range = (-float('inf'), float('inf'))
@@ -108,7 +106,7 @@ class SumoEnvironment(MultiAgentEnv):
 
         traci.start(sumo_cmd, label=self.label)
 
-        self.traffic_signals = {ts: TrafficSignal(self, ts, self.delta_time, self.yellow_time, self.min_green, self.max_green) for ts in self.ts_ids}
+        self.traffic_signals = {ts: TrafficSignal(self, ts, self.delta_time, self.yellow_time, self.min_green) for ts in self.ts_ids}
 
         self.vehicles = dict()
 
@@ -279,13 +277,6 @@ class SumoEnvironment(MultiAgentEnv):
 
     def _discretize_density(self, density):
         return min(int(density*10), 9)
-
-    def _discretize_elapsed_time(self, elapsed):
-        elapsed *= self.max_green
-        for i in range(self.max_green//self.delta_time):
-            if elapsed <= self.delta_time + i*self.delta_time:
-                return i
-        return self.max_green//self.delta_time -1
 
 
     
