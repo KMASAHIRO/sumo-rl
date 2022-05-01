@@ -76,6 +76,10 @@ class TrafficSignal:
         logic.phases = self.all_phases
         traci.trafficlight.setProgramLogic(self.id, logic)
         traci.trafficlight.setRedYellowGreenState(self.id, self.all_phases[0].state)
+    
+    @property
+    def phase(self):
+        return traci.trafficlight.getPhase(self.id)
 
     @property
     def time_to_act(self):
