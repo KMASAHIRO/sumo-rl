@@ -101,14 +101,14 @@ class TrafficSignal:
             new_phase = int(new_phase)
         
         if new_phase is None or self.green_phase == new_phase or self.time_since_last_phase_change < self.yellow_time + self.min_green:
-            #traci.trafficlight.setPhase(self.id, self.green_phase)
-            traci.trafficlight.setRedYellowGreenState(self.id, self.all_phases[self.green_phase].state)
             if self.time_since_last_phase_change < self.yellow_time + self.min_green:
                 self.next_action_time = max(
                     [self.env.sim_step + self.min_green + self.yellow_time - self.time_since_last_phase_change, 
                     self.env.sim_step + self.delta_time]
                     )
             else:
+                #traci.trafficlight.setPhase(self.id, self.green_phase)
+                traci.trafficlight.setRedYellowGreenState(self.id, self.all_phases[self.green_phase].state)
                 self.next_action_time = self.env.sim_step + self.delta_time
         else:
             #traci.trafficlight.setPhase(self.id, self.yellow_dict[(self.green_phase, new_phase)])  # turns yellow
