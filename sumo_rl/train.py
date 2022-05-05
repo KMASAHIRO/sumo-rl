@@ -15,7 +15,7 @@ def train_agent(
     delta_time=1, yellow_time=2, min_green=5, reward_type="waiting_time", num_layers=1, 
     num_hidden_units=512, lr=3e-5, decay_rate=0.01, temperature=1.0, noise=0.0, encoder_type="fc", 
     lstm_len=5, embedding_num=5, embedding_decay=0.99, eps=1e-5, beta=0.25, reward_csv=None, 
-    loss_csv=None, use_gpu=False):
+    loss_csv=None, use_gpu=False, seed="random"):
     
     if reward_csv is not None:
         csv_dir = "./" + reward_csv.replace(".csv","") + "/outputs"
@@ -27,7 +27,7 @@ def train_agent(
                           out_csv_name=csv_dir, test=False, use_gui=False, 
                           begin_seconds=begin_seconds, delta_time=delta_time, 
                           yellow_time=yellow_time, min_green=min_green, 
-                          reward_type=reward_type, single_agent=False)
+                          reward_type=reward_type, single_agent=False, seed=seed)
     traffic_light_ids = env.ts_ids
 
     reset_obs = env.reset()
