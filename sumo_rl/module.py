@@ -6,7 +6,7 @@ class PolicyFunction(torch.nn.Module):
     def __init__(
         self, num_states, num_traffic_lights, num_actions, num_layers=1, 
         num_hidden_units=128, temperature=1.0, noise=0.0, encoder_type="fc",
-        embedding_num=5, embedding_decay=0.99, eps=1e-5, use_gpu=False):
+        embedding_num=5, embedding_decay=0.99, eps=1e-5, device="cpu"):
         
         super().__init__()
         self.num_states = num_states
@@ -18,10 +18,7 @@ class PolicyFunction(torch.nn.Module):
         self.embedding_num = embedding_num
         self.embedding_decay = embedding_decay
         self.eps = eps
-        if use_gpu:
-            self.device = torch.device("cuda")
-        else:
-            self.device = torch.device("cpu")
+        self.device = torch.device(device)
 
         if self.encoder_type == "fc":
             self.fc_first = torch.nn.Linear(self.num_states, num_hidden_units)
@@ -147,7 +144,7 @@ class Agent():
     def __init__(
         self, num_states, num_traffic_lights, num_actions, num_layers, num_hidden_units, 
         temperature, noise, encoder_type, lr, decay_rate, embedding_num, embedding_decay, 
-        eps, beta, is_train=True, use_gpu=False, model_path=None
+        eps, beta, is_train=True, device="cpu", model_path=None
         ):
         
         self.num_states = num_states
@@ -157,16 +154,12 @@ class Agent():
         self.encoder_type = encoder_type
         self.beta = beta
         self.is_train = is_train
-
-        if use_gpu:
-            self.device = torch.device("cuda")
-        else:
-            self.device = torch.device("cpu")
+        self.device = torch.device(device)
         
         self.policy_function = PolicyFunction(
             self.num_states, self.num_traffic_lights, self.num_actions, num_layers, 
             num_hidden_units, temperature, noise, encoder_type, embedding_num, 
-            embedding_decay, eps, use_gpu)
+            embedding_decay, eps, device)
         self.policy_function.to(self.device)
 
         if model_path:
