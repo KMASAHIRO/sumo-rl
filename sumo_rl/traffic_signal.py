@@ -16,7 +16,7 @@ class TrafficSignal:
     It is responsible for retrieving information and changing the traffic phase using Traci API
     """
 
-    def __init__(self, env, ts_id, delta_time, yellow_time, min_green):
+    def __init__(self, env, ts_id, delta_time, yellow_time, min_green, begin_seconds):
         self.id = ts_id
         self.env = env
         self.delta_time = delta_time
@@ -25,7 +25,7 @@ class TrafficSignal:
         self.green_phase = 0
         self.is_yellow = False
         self.time_since_last_phase_change = 0
-        self.next_action_time = 0
+        self.next_action_time = begin_seconds
         self.last_measure = 0.0
         self.last_reward = None
 

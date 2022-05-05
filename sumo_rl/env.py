@@ -35,8 +35,8 @@ class SumoEnvironment(gym.Env):
 
     def __init__(
         self, net_file, route_file, save_state_dir=None, save_state_interval=1, out_csv_name=None, test=False, 
-        use_gui=False, begin_seconds=0.0, num_seconds=20000.0, max_depart_delay=100000, time_to_teleport=-1, delta_time=5, yellow_time=2, 
-        min_green=5, reward_type="waiting_time", label="sim1", single_agent=False):
+        use_gui=False, begin_seconds=0, num_seconds=20000.0, max_depart_delay=100000, time_to_teleport=-1, delta_time=5, yellow_time=2, 
+        min_green=5, reward_type="waiting_time", label="sim1", single_agent=False, seed="random"):
         self._net = net_file
         self._route = route_file
         self.use_gui = use_gui
@@ -54,12 +54,13 @@ class SumoEnvironment(gym.Env):
         self.yellow_time = yellow_time
         self.reward_type = reward_type
         self.label = label
+        self.seed = seed
 
         traci.start([sumolib.checkBinary('sumo'), '-n', self._net], label=self.label)  # start only to retrieve information
 
         self.single_agent = single_agent
         self.ts_ids = list(traci.trafficlight.getIDList())
-        self.traffic_signals = {ts: TrafficSignal(self, ts, self.delta_time, self.yellow_time, self.min_green) for ts in self.ts_ids}
+        self.traffic_signals = {ts: TrafficSignal(self, ts, self.delta_time, self.yellow_time, self.min_green, self.begin_seconds) for ts in self.ts_ids}
         self.vehicles = dict()
 
         self.reward_range = (-float('inf'), float('inf'))
@@ -100,17 +101,21 @@ class SumoEnvironment(gym.Env):
                      '--max-depart-delay', str(self.max_depart_delay), 
                      '--waiting-time-memory', '10000',
                      '--time-to-teleport', str(self.time_to_teleport),
-                     '--random']
+                     '-b', str(self.begin_seconds)]
+
+        if self.seed == "random":
+            sumo_cmd.append("--random")
+        else:
+            sumo_cmd.extend(["--seed", str(self.seed)])
+
         if self.use_gui:
             sumo_cmd.append('--start')
 
         traci.start(sumo_cmd, label=self.label)
 
-        self.traffic_signals = {ts: TrafficSignal(self, ts, self.delta_time, self.yellow_time, self.min_green) for ts in self.ts_ids}
+        self.traffic_signals = {ts: TrafficSignal(self, ts, self.delta_time, self.yellow_time, self.min_green, self.begin_seconds) for ts in self.ts_ids}
 
         self.vehicles = dict()
-
-        traci.simulationStep(self.begin_seconds)
 
         self.save_state("step0.xml", self.run)
         
