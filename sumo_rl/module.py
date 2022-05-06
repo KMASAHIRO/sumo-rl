@@ -216,6 +216,7 @@ class Agent():
             if self.encoder_type == "vq":
                 self.middle_outputs[embedding_idx].append(vector)
                 self.beta_loss_history.append(beta_loss)
+                del beta_loss, vector, embedding_idx
         
         del obs, actions_prob
         if self.device != "cpu":
@@ -262,12 +263,13 @@ class Agent():
         loss.backward()
         self.optimizer.step()
 
+        return_loss = loss.to("cpu").detach().numpy()
         del loss
         if self.device != "cpu":
             torch.cuda.empty_cache()
         
         if return_loss:
-            return loss.to("cpu").detach().numpy()
+            return return_loss
 
     def set_rewards(self, reward):
         if self.is_train:
