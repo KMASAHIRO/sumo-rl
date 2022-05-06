@@ -217,6 +217,10 @@ class Agent():
                 self.middle_outputs[embedding_idx].append(vector)
                 self.beta_loss_history.append(beta_loss)
         
+        del obs, actions_prob
+        if self.device != "cpu":
+            torch.cuda.empty_cache()
+        
         return chosen_actions
 
     def train(self, return_loss=False):
@@ -243,17 +247,25 @@ class Agent():
             cluster_size_norm = (cluster_size + eps) / (n + embedding_num*eps) * n
             embedding = embedding_avg / cluster_size_norm.unsqueeze(-1)
 
-            self.embedding = torch.nn.Parameter(embedding, requires_grad=False)
-            self.embedding_avg = torch.nn.Parameter(embedding_avg, requires_grad=False)
-            self.cluster_size = torch.nn.Parameter(cluster_size, requires_grad=False)
+            del self.policy_function.embedding, self.policy_function.embedding_avg, self.policy_function.cluster_size
+
+            self.policy_function.embedding = torch.nn.Parameter(embedding, requires_grad=False)
+            self.policy_function.embedding_avg = torch.nn.Parameter(embedding_avg, requires_grad=False)
+            self.policy_function.cluster_size = torch.nn.Parameter(cluster_size, requires_grad=False)
         
             loss = self.loss_f(self.actions_prob_history, self.rewards_history, self.beta, self.beta_loss_history)
+            del prev_embedding, prev_embedding_avg, prev_cluster_size, decay, embedding_num, eps
+            del chosen_num, embedding_sum, embedding_avg, cluster_size, n, cluster_size_norm, embedding
         else:
             loss = self.loss_f(self.actions_prob_history, self.rewards_history)
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
 
+        del loss
+        if self.device != "cpu":
+            torch.cuda.empty_cache()
+        
         if return_loss:
             return loss.to("cpu").detach().numpy()
 
