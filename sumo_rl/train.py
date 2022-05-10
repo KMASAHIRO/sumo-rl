@@ -15,7 +15,7 @@ def train_agent(
     delta_time=1, yellow_time=2, min_green=5, reward_type="waiting_time", num_layers=1, 
     num_hidden_units=512, lr=3e-5, decay_rate=0.01, temperature=1.0, noise=0.0, encoder_type="fc", 
     lstm_len=5, embedding_num=5, embedding_decay=0.99, eps=1e-5, beta=0.25, embedding_no_train=False, 
-    reward_csv=None, loss_csv=None, device="cpu", seed="random", logger=None):
+    embedding_start_train=None, reward_csv=None, loss_csv=None, device="cpu", seed="random", logger=None):
     
     if reward_csv is not None:
         csv_dir = "./" + reward_csv.replace(".csv","") + "/outputs"
@@ -43,7 +43,7 @@ def train_agent(
         num_layers=num_layers, num_hidden_units=num_hidden_units, temperature=temperature, noise=noise, 
         encoder_type=encoder_type, lr=lr, decay_rate=decay_rate, embedding_num=embedding_num, 
         embedding_decay=embedding_decay, eps=eps, beta=beta, embedding_no_train=embedding_no_train, 
-        is_train=True, device=device)
+        embedding_start_train=embedding_start_train, is_train=True, device=device)
     
     steps = 0
     steps_per_learn = max_steps*episode_per_learn

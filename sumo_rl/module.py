@@ -143,7 +143,8 @@ class Agent():
     def __init__(
         self, num_states, num_traffic_lights, num_actions, num_layers, num_hidden_units, 
         temperature, noise, encoder_type, lr, decay_rate, embedding_num, embedding_decay, 
-        eps, beta, embedding_no_train=False, is_train=True, device="cpu", model_path=None
+        eps, beta, embedding_no_train=False, embedding_start_train=None, is_train=True, 
+        device="cpu", model_path=None
         ):
         
         self.num_states = num_states
@@ -153,7 +154,9 @@ class Agent():
         self.encoder_type = encoder_type
         self.beta = beta
         self.embedding_no_train = embedding_no_train
+        self.embedding_start_train = embedding_start_train
         self.is_train = is_train
+        self.train_num = 0
         self.device = torch.device(device)
         
         self.policy_function = PolicyFunction(
@@ -223,6 +226,11 @@ class Agent():
         return chosen_actions
 
     def train(self, return_loss=False):
+        self.train_num += 1
+        if self.embedding_start_train is not None:
+            if self.train_num == self.embedding_start_train:
+                self.embedding_no_train = False
+        
         if self.encoder_type == "vq":
             if self.embedding_no_train:
                 loss = self.loss_f(self.actions_prob_history, self.rewards_history, self.beta, self.beta_loss_history)
