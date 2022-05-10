@@ -226,9 +226,9 @@ class Agent():
             prev_embedding = self.policy_function.embedding.to("cpu")
             prev_embedding_avg = self.policy_function.embedding_avg.to("cpu")
             prev_cluster_size = self.policy_function.cluster_size.to("cpu")
-            decay = self.policy_function.embedding_decay.to("cpu")
-            embedding_num = self.policy_function.embedding_num.to("cpu")
-            eps = self.policy_function.eps.to("cpu")
+            decay = self.policy_function.embedding_decay
+            embedding_num = self.policy_function.embedding_num
+            eps = self.policy_function.eps
 
             chosen_num = list()
             embedding_sum = list()
