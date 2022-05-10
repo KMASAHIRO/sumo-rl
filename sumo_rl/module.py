@@ -237,7 +237,7 @@ class Agent():
                 if len(self.middle_outputs[i]) == 0:
                     embedding_sum.append(torch.zeros(len(prev_embedding_avg[i])))
                 else:
-                    embedding_sum.append(torch.stack(self.middle_outputs[i],dim=0).sum(0))
+                    embedding_sum.append(torch.stack(self.middle_outputs[i],dim=0).sum(0).to("cpu"))
             embedding_avg = decay*prev_embedding_avg + (1-decay)*torch.stack(embedding_sum, dim=0)
             cluster_size = decay*prev_cluster_size + (1-decay)*torch.tensor(chosen_num)
 
