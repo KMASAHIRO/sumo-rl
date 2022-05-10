@@ -56,11 +56,8 @@ class SumoEnvironment(gym.Env):
         self.label = label
         self.seed = seed
 
-        traci.start([sumolib.checkBinary('sumo'), '-n', self._net], label=self.label)  # start only to retrieve information
-
+        
         self.single_agent = single_agent
-        self.ts_ids = list(traci.trafficlight.getIDList())
-        self.traffic_signals = {ts: TrafficSignal(self, ts, self.delta_time, self.yellow_time, self.min_green, self.begin_seconds) for ts in self.ts_ids}
         self.vehicles = dict()
 
         self.reward_range = (-float('inf'), float('inf'))
@@ -82,8 +79,6 @@ class SumoEnvironment(gym.Env):
                 raise FileExistsError("directory does not exist")
             self.save_state_dir = save_state_dir
             self.save_state_flag = True
-
-        traci.close()
     
     def reset(self):
         if self.run != 0:
@@ -112,6 +107,8 @@ class SumoEnvironment(gym.Env):
             sumo_cmd.append('--start')
 
         traci.start(sumo_cmd, label=self.label)
+
+        self.ts_ids = list(traci.trafficlight.getIDList())
 
         self.traffic_signals = {ts: TrafficSignal(self, ts, self.delta_time, self.yellow_time, self.min_green, self.begin_seconds) for ts in self.ts_ids}
 

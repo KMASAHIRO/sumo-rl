@@ -15,7 +15,7 @@ def train_agent(
     delta_time=1, yellow_time=2, min_green=5, reward_type="waiting_time", num_layers=1, 
     num_hidden_units=512, lr=3e-5, decay_rate=0.01, temperature=1.0, noise=0.0, encoder_type="fc", 
     lstm_len=5, embedding_num=5, embedding_decay=0.99, eps=1e-5, beta=0.25, reward_csv=None, 
-    loss_csv=None, device="cpu", seed="random"):
+    loss_csv=None, device="cpu", seed="random", logger=None):
     
     if reward_csv is not None:
         csv_dir = "./" + reward_csv.replace(".csv","") + "/outputs"
@@ -28,9 +28,9 @@ def train_agent(
                           begin_seconds=begin_seconds, delta_time=delta_time, 
                           yellow_time=yellow_time, min_green=min_green, 
                           reward_type=reward_type, single_agent=False, seed=seed)
-    traffic_light_ids = env.ts_ids
 
     reset_obs = env.reset()
+    traffic_light_ids = env.ts_ids
     num_states = 0
     for obs_t in reset_obs.values():
         num_states += (len(obs_t)+1) * 2
@@ -55,6 +55,9 @@ def train_agent(
             obs_seq = list()
         if i!= 0:
             _ = env.reset()
+        
+        if traffic_light_ids != env.ts_ids and logger is not None:
+            logger.debug(f"right ts_ids: {traffic_light_ids}, current ts_ids: {env.ts_ids}")
         
         action = dict()
         for j in range(len(traffic_light_ids)):

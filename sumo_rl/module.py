@@ -85,13 +85,12 @@ class PolicyFunction(torch.nn.Module):
             x = self.fc_layers[i](x)
             x = self.relu(x)
         
-        embedding_vectors = self.embedding.detach()
         vector = x.detach()
-        embedding_idx = (vector - embedding_vectors).pow(2).sum(-1).argmin(-1)
+        embedding_idx = (vector - self.embedding).pow(2).sum(-1).argmin(-1)
 
-        quantize = x + (embedding_vectors[embedding_idx] - vector)
+        quantize = x + (self.embedding[embedding_idx] - vector)
         if self.training:
-            beta_loss = (x - embedding_vectors[embedding_idx]).pow(2).sum(-1)
+            beta_loss = (x - self.embedding[embedding_idx]).pow(2).sum(-1)
             return quantize, beta_loss, vector, embedding_idx
         else:
             return quantize
@@ -216,9 +215,7 @@ class Agent():
             if self.encoder_type == "vq":
                 self.middle_outputs[embedding_idx].append(vector)
                 self.beta_loss_history.append(beta_loss)
-                del beta_loss, vector, embedding_idx
         
-        del obs, actions_prob
         if self.device != "cpu":
             torch.cuda.empty_cache()
         
@@ -226,50 +223,42 @@ class Agent():
 
     def train(self, return_loss=False):
         if self.encoder_type == "vq":
-            prev_embedding = self.policy_function.embedding.detach()
-            prev_embedding_avg = self.policy_function.embedding_avg.detach()
-            prev_cluster_size = self.policy_function.cluster_size.detach()
-            decay = self.policy_function.embedding_decay
-            embedding_num = self.policy_function.embedding_num
-            eps = self.policy_function.eps
+            prev_embedding = self.policy_function.embedding.to("cpu")
+            prev_embedding_avg = self.policy_function.embedding_avg.to("cpu")
+            prev_cluster_size = self.policy_function.cluster_size.to("cpu")
+            decay = self.policy_function.embedding_decay.to("cpu")
+            embedding_num = self.policy_function.embedding_num.to("cpu")
+            eps = self.policy_function.eps.to("cpu")
 
             chosen_num = list()
             embedding_sum = list()
             for i in range(len(self.middle_outputs)):
                 chosen_num.append(len(self.middle_outputs[i]))
                 if len(self.middle_outputs[i]) == 0:
-                    embedding_sum.append(torch.zeros(len(prev_embedding_avg[i])).to(self.device))
+                    embedding_sum.append(torch.zeros(len(prev_embedding_avg[i])))
                 else:
                     embedding_sum.append(torch.stack(self.middle_outputs[i],dim=0).sum(0))
             embedding_avg = decay*prev_embedding_avg + (1-decay)*torch.stack(embedding_sum, dim=0)
-            cluster_size = decay*prev_cluster_size + (1-decay)*torch.tensor(chosen_num).to(self.device)
+            cluster_size = decay*prev_cluster_size + (1-decay)*torch.tensor(chosen_num)
 
             n = cluster_size.sum()
             cluster_size_norm = (cluster_size + eps) / (n + embedding_num*eps) * n
             embedding = embedding_avg / cluster_size_norm.unsqueeze(-1)
 
-            del self.policy_function.embedding, self.policy_function.embedding_avg, self.policy_function.cluster_size
-
             self.policy_function.embedding = torch.nn.Parameter(embedding, requires_grad=False)
             self.policy_function.embedding_avg = torch.nn.Parameter(embedding_avg, requires_grad=False)
             self.policy_function.cluster_size = torch.nn.Parameter(cluster_size, requires_grad=False)
+            self.policy_function.to(self.device)
         
             loss = self.loss_f(self.actions_prob_history, self.rewards_history, self.beta, self.beta_loss_history)
-            del prev_embedding, prev_embedding_avg, prev_cluster_size, decay, embedding_num, eps
-            del chosen_num, embedding_sum, embedding_avg, cluster_size, n, cluster_size_norm, embedding
         else:
             loss = self.loss_f(self.actions_prob_history, self.rewards_history)
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
-
-        return_loss = loss.to("cpu").detach().numpy()
-        del loss
-        if self.device != "cpu":
-            torch.cuda.empty_cache()
         
         if return_loss:
-            return return_loss
+            return loss.to("cpu").detach().numpy()
 
     def set_rewards(self, reward):
         if self.is_train:
