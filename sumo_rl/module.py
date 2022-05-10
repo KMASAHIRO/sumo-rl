@@ -143,7 +143,7 @@ class Agent():
     def __init__(
         self, num_states, num_traffic_lights, num_actions, num_layers, num_hidden_units, 
         temperature, noise, encoder_type, lr, decay_rate, embedding_num, embedding_decay, 
-        eps, beta, is_train=True, device="cpu", model_path=None
+        eps, beta, embedding_no_train=False, is_train=True, device="cpu", model_path=None
         ):
         
         self.num_states = num_states
@@ -152,6 +152,7 @@ class Agent():
         self.lr = lr
         self.encoder_type = encoder_type
         self.beta = beta
+        self.embedding_no_train = embedding_no_train
         self.is_train = is_train
         self.device = torch.device(device)
         
@@ -223,34 +224,37 @@ class Agent():
 
     def train(self, return_loss=False):
         if self.encoder_type == "vq":
-            prev_embedding = self.policy_function.embedding.to("cpu")
-            prev_embedding_avg = self.policy_function.embedding_avg.to("cpu")
-            prev_cluster_size = self.policy_function.cluster_size.to("cpu")
-            decay = self.policy_function.embedding_decay
-            embedding_num = self.policy_function.embedding_num
-            eps = self.policy_function.eps
+            if self.embedding_no_train:
+                loss = self.loss_f(self.actions_prob_history, self.rewards_history, self.beta, self.beta_loss_history)
+            else:
+                prev_embedding = self.policy_function.embedding.to("cpu")
+                prev_embedding_avg = self.policy_function.embedding_avg.to("cpu")
+                prev_cluster_size = self.policy_function.cluster_size.to("cpu")
+                decay = self.policy_function.embedding_decay
+                embedding_num = self.policy_function.embedding_num
+                eps = self.policy_function.eps
 
-            chosen_num = list()
-            embedding_sum = list()
-            for i in range(len(self.middle_outputs)):
-                chosen_num.append(len(self.middle_outputs[i]))
-                if len(self.middle_outputs[i]) == 0:
-                    embedding_sum.append(torch.zeros(len(prev_embedding_avg[i])))
-                else:
-                    embedding_sum.append(torch.stack(self.middle_outputs[i],dim=0).sum(0).to("cpu"))
-            embedding_avg = decay*prev_embedding_avg + (1-decay)*torch.stack(embedding_sum, dim=0)
-            cluster_size = decay*prev_cluster_size + (1-decay)*torch.tensor(chosen_num)
+                chosen_num = list()
+                embedding_sum = list()
+                for i in range(len(self.middle_outputs)):
+                    chosen_num.append(len(self.middle_outputs[i]))
+                    if len(self.middle_outputs[i]) == 0:
+                        embedding_sum.append(torch.zeros(len(prev_embedding_avg[i])))
+                    else:
+                        embedding_sum.append(torch.stack(self.middle_outputs[i],dim=0).sum(0).to("cpu"))
+                embedding_avg = decay*prev_embedding_avg + (1-decay)*torch.stack(embedding_sum, dim=0)
+                cluster_size = decay*prev_cluster_size + (1-decay)*torch.tensor(chosen_num)
 
-            n = cluster_size.sum()
-            cluster_size_norm = (cluster_size + eps) / (n + embedding_num*eps) * n
-            embedding = embedding_avg / cluster_size_norm.unsqueeze(-1)
+                n = cluster_size.sum()
+                cluster_size_norm = (cluster_size + eps) / (n + embedding_num*eps) * n
+                embedding = embedding_avg / cluster_size_norm.unsqueeze(-1)
 
-            self.policy_function.embedding = torch.nn.Parameter(embedding, requires_grad=False)
-            self.policy_function.embedding_avg = torch.nn.Parameter(embedding_avg, requires_grad=False)
-            self.policy_function.cluster_size = torch.nn.Parameter(cluster_size, requires_grad=False)
-            self.policy_function.to(self.device)
+                self.policy_function.embedding = torch.nn.Parameter(embedding, requires_grad=False)
+                self.policy_function.embedding_avg = torch.nn.Parameter(embedding_avg, requires_grad=False)
+                self.policy_function.cluster_size = torch.nn.Parameter(cluster_size, requires_grad=False)
+                self.policy_function.to(self.device)
         
-            loss = self.loss_f(self.actions_prob_history, self.rewards_history, self.beta, self.beta_loss_history)
+                loss = self.loss_f(self.actions_prob_history, self.rewards_history, self.beta, self.beta_loss_history)
         else:
             loss = self.loss_f(self.actions_prob_history, self.rewards_history)
         self.optimizer.zero_grad()
