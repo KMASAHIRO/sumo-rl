@@ -130,12 +130,12 @@ def train_agent(
                 if current_reward_mean > best_reward_mean:
                     best_reward_mean = current_reward_mean
                     agent.save_model("best_" + model_save_path)
-
+        """
         if reward_csv is not None:
             print(reward_csv.replace("_reward.csv","") + ": episodes " + str(i + 1) + " ended")
         else:
             print("episodes " + str(i + 1) + " ended")
-
+        """
     env.reset()
     env.close()
     agent.reset_batch()
