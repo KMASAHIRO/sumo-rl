@@ -261,6 +261,10 @@ class Agent():
                 self.policy_function.embedding_avg = torch.nn.Parameter(embedding_avg, requires_grad=False)
                 self.policy_function.cluster_size = torch.nn.Parameter(cluster_size, requires_grad=False)
                 self.policy_function.to(self.device)
+
+                self.middle_outputs = list()
+                for i in range(embedding_num):
+                    self.middle_outputs.append(list())
         
                 loss = self.loss_f(self.actions_prob_history, self.rewards_history, self.beta, self.beta_loss_history)
         else:
