@@ -234,7 +234,7 @@ class Agent():
         if self.encoder_type == "vq":
             if self.embedding_no_train:
                 self.middle_outputs = list()
-                for i in range(embedding_num):
+                for i in range(self.policy_function.embedding_num):
                     self.middle_outputs.append(list())
                 loss = self.loss_f(self.actions_prob_history, self.rewards_history, self.beta, self.beta_loss_history)
             else:
