@@ -90,7 +90,7 @@ class PolicyFunction(torch.nn.Module):
 
         quantize = x + (self.embedding[embedding_idx] - vector)
         if self.training:
-            beta_loss = (x - self.embedding[embedding_idx]).pow(2).sum(-1)
+            beta_loss = (x - self.embedding[embedding_idx]).pow(2).mean(-1)
             return quantize, beta_loss, vector, embedding_idx
         else:
             return quantize
@@ -238,7 +238,6 @@ class Agent():
                     self.middle_outputs.append(list())
                 loss = self.loss_f(self.actions_prob_history, self.rewards_history, self.beta, self.beta_loss_history)
             else:
-                prev_embedding = self.policy_function.embedding.to("cpu")
                 prev_embedding_avg = self.policy_function.embedding_avg.to("cpu")
                 prev_cluster_size = self.policy_function.cluster_size.to("cpu")
                 decay = self.policy_function.embedding_decay
