@@ -36,7 +36,7 @@ class SumoEnvironment(gym.Env):
     def __init__(
         self, net_file, route_file, save_state_dir=None, save_state_interval=1, out_csv_name=None, test=False, 
         use_gui=False, begin_seconds=0, num_seconds=20000.0, max_depart_delay=100000, time_to_teleport=-1, delta_time=5, yellow_time=2, 
-        min_green=5, reward_type="waiting_time", label="sim1", single_agent=False, seed="random"):
+        min_green=5, reward_type="waiting_time", port=None, label="sim1", single_agent=False, seed="random"):
         self._net = net_file
         self._route = route_file
         self.use_gui = use_gui
@@ -53,6 +53,7 @@ class SumoEnvironment(gym.Env):
         self.min_green = min_green
         self.yellow_time = yellow_time
         self.reward_type = reward_type
+        self.port = port
         self.label = label
         self.seed = seed
 
@@ -106,7 +107,7 @@ class SumoEnvironment(gym.Env):
         if self.use_gui:
             sumo_cmd.append('--start')
 
-        traci.start(sumo_cmd, label=self.label)
+        traci.start(sumo_cmd, port=self.port, label=self.label)
 
         self.ts_ids = list(traci.trafficlight.getIDList())
 
