@@ -51,7 +51,7 @@ def train_agent(
 
     loss_list = list()
     best_reward_mean = float("-inf")
-    current_reward_sum = 0
+    current_reward = list()
     for i in range(episodes):
         if encoder_type == "lstm":
             obs_seq = list()
@@ -102,7 +102,7 @@ def train_agent(
             obs = np.concatenate(list(state[0].values()))
             reward = np.asarray(list(state[1].values())) / float(delta_time)
             reward = np.clip(reward, -1.0, 1.0)
-            current_reward_sum += reward
+            current_reward.append(np.sum(list(state[1].values())))
             end = any(list(state[2].values()))
             agent.set_rewards(reward)
 
@@ -127,9 +127,10 @@ def train_agent(
                     agent.train()
                 agent.reset_batch()
 
-                current_reward_mean = np.mean(current_reward_sum)
+                current_reward_mean = np.mean(current_reward)
                 if current_reward_mean > best_reward_mean:
                     best_reward_mean = current_reward_mean
+                    current_reward = list()
                     agent.save_model("best_" + model_save_path)
         
         if reward_csv is not None:
