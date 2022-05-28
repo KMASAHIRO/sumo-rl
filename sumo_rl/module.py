@@ -5,8 +5,9 @@ import numpy as np
 class PolicyFunction(torch.nn.Module):
     def __init__(
         self, num_states, num_traffic_lights, num_actions, num_layers=1, 
-        num_hidden_units=128, temperature=1.0, noise=0.0, encoder_type="fc",
-        embedding_num=5, embedding_decay=0.99, eps=1e-5, device="cpu"):
+        num_hidden_units=128, temperature=1.0, noise=0.0, encoder_type="fc", 
+        embedding_type="random", embedding_num=5, embedding_decay=0.99, eps=1e-5, 
+        device="cpu"):
         
         super().__init__()
         self.num_states = num_states
@@ -29,7 +30,10 @@ class PolicyFunction(torch.nn.Module):
             self.encoder = self.lstm_encoder
         elif self.encoder_type == "vq":
             self.fc_first = torch.nn.Linear(self.num_states, num_hidden_units)
-            embedding = torch.randn(self.embedding_num, num_hidden_units)
+            if embedding_type == "random":
+                embedding = torch.randn(self.embedding_num, num_hidden_units)
+            elif embedding_type == "one_hot":
+                embedding = torch.nn.functional.one_hot(torch.tensor(range(num_hidden_units)), num_classes=num_hidden_units)
             self.embedding = torch.nn.Parameter(embedding, requires_grad=False)
             self.embedding_avg = torch.nn.Parameter(embedding, requires_grad=False)
             self.cluster_size = torch.nn.Parameter(torch.zeros(self.embedding_num), requires_grad=False)
